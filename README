@@ -1,1 +1,15 @@
 Boot a pair or more computers for 1hour during a 24hour period.
+
+Dependency is an install of GNU Scientific Library into your home directory area:
+
+cd ~/src
+tar xzvf gsl-1.15.tar.gz
+cd gsl-1.15
+./configure --prefix=$HOME/gsl-1.15
+make ; make install
+
+To compile clusterboot:
+
+cd src
+make
+
