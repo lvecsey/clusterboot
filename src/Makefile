@@ -1,7 +1,7 @@
 
 CC=gcc
 
-all : clusterboot await-shutdown
+all : clusterboot await-shutdown send-shutdown
 
 clusterboot : CFLAGS+=-Wall -O2
 
@@ -20,3 +20,11 @@ await-shutdown : LIBS=-lrt
 
 await-shutdown : await-shutdown.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+send-shutdown : CFLAGS=-O2 -Wall
+
+send-shutdown : LIBS=-lrt
+
+send-shutdown : send-shutdown.o udp6_shutdown.o show_address.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+
