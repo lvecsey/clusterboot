@@ -14,6 +14,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <sys/socket.h>
+
+#include <netdb.h>
+#include <errno.h>
+
+#include <string.h>
+
+#include "udp6_shutdown.h"
+
 int compare_time(const void *a, const void *b) {
 
   clusterboot_t *aboot1 = (clusterboot_t*) a, *bboot1 = (clusterboot_t*) b;
@@ -55,7 +64,23 @@ int main(int argc, char *argv[]) {
 
   cluster_node_t *node;
 
+  clusterboot_t *startup_current = items, *shutdown_current = items;
+
+  char *env_CLUSTERBOOT_INTERFACE = getenv("CLUSTERBOOT_INTERFACE");
+
+  char *interface = env_CLUSTERBOOT_INTERFACE != NULL ? env_CLUSTERBOOT_INTERFACE : "eth2";
+
+  char *ipv6_address_string;
+
   gsl_rng *r;
+
+  int s;
+
+  int retval;
+
+  struct addrinfo hints;
+
+  struct addrinfo *res;
 
   if (items==NULL) {
     fprintf(stderr, "%s: Trouble allocating %ld items.\n", __FUNCTION__, num_entries);
@@ -87,15 +112,66 @@ int main(int argc, char *argv[]) {
 
   }
 
+  s = socket(AF_INET6, SOCK_DGRAM, 0);
+  if (s==-1) {
+    perror("socket");
+    fprintf(stderr, "%s: Trouble creating ipv6 udp socket.\n", __FUNCTION__);
+    return -1;
+  }
+
+  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&retval, sizeof(retval)) < 0) {
+    perror("setsockopt");
+    return -1;
+  }
+
+
   while ((read_bytes = getline(&line, &len, stdin)) != -1) {
     
     if (len>0) {
+
+      ipv6_address_string = strchr(line, ' ');
+
       node = malloc(sizeof(cluster_node_t));
       if (node==NULL) {
 	fprintf(stderr, "%s: Trouble allocating cluster_node.\n", __FUNCTION__);
 	return -1;
       }
-      sscanf(line, "%x:%x:%x:%x:%x:%x %x%x:%x%x:%x%x:%x%x:%x%x:%x%x", node->mac_address, node->mac_address+1, node->mac_address+2, node->mac_address+3, node->mac_address+4, node->mac_address+5, node->ipv6, node->ipv6+1, node->ipv6+2, node->ipv6+3, node->ipv6+4, node->ipv6+5, node->ipv6+6, node->ipv6+7, node->ipv6+8, node->ipv6+9, node->ipv6+10, node->ipv6+11);
+
+      if (ipv6_address_string!=NULL) {
+
+	ipv6_address_string++;
+
+	struct addrinfo *rp;
+
+	hints.ai_flags = 0;
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_protocol = 17;
+	hints.ai_addrlen = 0;
+	hints.ai_addr = NULL;
+	hints.ai_canonname = NULL;
+	hints.ai_next = NULL;
+
+	retval = getaddrinfo(ipv6_address_string, NULL, &hints, &res);
+    
+	if (retval != 0) {
+	  fprintf(stderr, "%s: Trouble with call to getaddrinfo.\n", __FUNCTION__);
+	  fprintf(stderr, "%s: gai_strerror = %s\n", __FUNCTION__, gai_strerror(retval));
+	  return -1;
+	}
+
+	for (rp = res; rp != NULL; rp = rp->ai_next) {
+
+	  memcpy(node->ipv6, ((char*) rp->ai_addr) + 8, sizeof(node->ipv6));
+
+	  break;
+
+	}
+
+      }
+
+      sscanf(line, "%x:%x:%x:%x:%x:%x", node->mac_address, node->mac_address+1, node->mac_address+2, node->mac_address+3, node->mac_address+4, node->mac_address+5);
+
       fill++;
       if (fill == end_fill) {
 	break;
@@ -130,11 +206,185 @@ int main(int argc, char *argv[]) {
       ct->shutdown.tv_sec = ct->startup.tv_sec + 3600;
       ct->shutdown.tv_nsec = ct->startup.tv_nsec;
 
+      fill->time = ct;
+
+      fill++;
+
     }
 
   }
 
   qsort(items, num_entries, sizeof(clusterboot_t), compare_time);
+
+  {
+
+    int startup_count_down = num_entries;
+
+    int shutdown_count_down = num_entries;
+
+    useconds_t sleep_interval = 3000;
+
+    struct timespec now;
+    
+    struct timespec *startup_time, *shutdown_time;
+
+    char string[50];
+
+    if (startup_current->time != NULL) {
+      startup_time = &startup_current->time->startup;
+    }
+
+    if (shutdown_current->time != NULL) {
+      shutdown_time = &shutdown_current->time->shutdown;
+    }
+
+    assert(startup_time!=NULL && shutdown_time!=NULL);
+
+    for ( ; startup_count_down > 0 && shutdown_count_down > 0; ) {
+
+      clock_gettime(CLOCK_MONOTONIC, &now);
+
+      usleep(sleep_interval);
+
+      if (startup_time->tv_sec > now.tv_sec && startup_count_down > 0) {
+
+	cluster_node_t *n = startup_current->node;
+
+	sprintf(string, "etherwake -i %s %x:%x:%x:%x:%x:%x", interface, n->mac_address, n->mac_address+1, n->mac_address+2, n->mac_address+3, n->mac_address+4, n->mac_address+5);
+
+	retval = system(string);
+
+	if (retval!=0) {
+	  fprintf(stderr, "%s: Tried to startup mac address and failed. retval=%d\n", __FUNCTION__, retval);
+	}
+
+	startup_current++;
+	startup_count_down--;
+	startup_time = startup_current->time;
+
+      }
+
+      if (shutdown_time->tv_sec > now.tv_sec && shutdown_count_down > 0) {
+
+	cluster_node_t *shutdown_node = shutdown_current->node;
+
+	assert(shutdown_node != NULL);
+
+	sscanf(line, "%x:%x:%x:%x:%x:%x %x%x:%x%x:%x%x:%x%x:%x%x:%x%x:%x%x:%x%x", node->mac_address, node->mac_address+1, node->mac_address+2, node->mac_address+3, node->mac_address+4, node->mac_address+5, node->ipv6, node->ipv6+1, node->ipv6+2, node->ipv6+3, node->ipv6+4, node->ipv6+5, node->ipv6+6, node->ipv6+7, node->ipv6+8, node->ipv6+9, node->ipv6+10, node->ipv6+11, node->ipv6+12, node->ipv6+13, node->ipv6+14, node->ipv6+15);
+
+	fill++;
+	if (fill == end_fill) {
+	  break;
+	}
+      }
+
+    }
+
+  }
+
+  if (fill < end_fill) {
+    num_entries = (fill - items);
+  }
+
+  printf("%s: Read %ld entries.\n", __FUNCTION__, num_entries);
+
+  {
+
+    int time_fills = num_entries;
+
+    cluster_time_t *ct;
+
+    for (fill = items; time_fills>0; time_fills--) {
+
+      ct = malloc(sizeof(cluster_time_t));
+      if (ct==NULL) {
+	fprintf(stderr, "%s: Trouble with malloc of cluster_time.\n", __FUNCTION__);
+	return -1;
+      }
+
+      clock_gettime(CLOCK_MONOTONIC, &ct->startup);
+      ct->startup.tv_sec += gsl_rng_uniform_int(r, 82800);
+
+      ct->shutdown.tv_sec = ct->startup.tv_sec + 3600;
+      ct->shutdown.tv_nsec = ct->startup.tv_nsec;
+
+      fill->time = ct;
+
+      fill++;
+
+    }
+
+  }
+
+  qsort(items, num_entries, sizeof(clusterboot_t), compare_time);
+
+  {
+
+    int startup_count_down = num_entries;
+
+    int shutdown_count_down = num_entries;
+
+    useconds_t sleep_interval = 3000;
+
+    struct timespec now;
+    
+    struct timespec *startup_time, *shutdown_time;
+
+    char string[50];
+
+    if (startup_current->time != NULL) {
+      startup_time = &startup_current->time->startup;
+    }
+
+    if (shutdown_current->time != NULL) {
+      shutdown_time = &shutdown_current->time->shutdown;
+    }
+
+    assert(startup_time!=NULL && shutdown_time!=NULL);
+
+    for ( ; startup_count_down > 0 && shutdown_count_down > 0; ) {
+
+      clock_gettime(CLOCK_MONOTONIC, &now);
+
+      usleep(sleep_interval);
+
+      if (startup_time->tv_sec > now.tv_sec && startup_count_down > 0) {
+
+	cluster_node_t *n = startup_current->node;
+
+	sprintf(string, "etherwake -i %s %x:%x:%x:%x:%x:%x", interface, n->mac_address, n->mac_address+1, n->mac_address+2, n->mac_address+3, n->mac_address+4, n->mac_address+5);
+
+	retval = system(string);
+
+	if (retval!=0) {
+	  fprintf(stderr, "%s: Tried to startup mac address and failed. retval=%d\n", __FUNCTION__, retval);
+	}
+
+	startup_current++;
+	startup_count_down--;
+	startup_time = &startup_current->time->startup;
+
+      }
+
+      if (shutdown_time->tv_sec > now.tv_sec && shutdown_count_down > 0) {
+
+	cluster_node_t *shutdown_node = shutdown_current->node;
+
+	assert(shutdown_node != NULL);
+
+	udp6_shutdown(s, shutdown_node->ipv6);
+
+	shutdown_current++;
+	shutdown_count_down--;
+	shutdown_time = &shutdown_current->time->shutdown;
+
+      }
+
+    }
+
+  }
+
+  close(s);
 
   return 0;
 
