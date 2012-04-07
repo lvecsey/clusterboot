@@ -50,6 +50,16 @@ int compare_time(const void *a, const void *b) {
 
 }
 
+void clean_end(unsigned char *s) {
+
+  while (*s) {
+    if (*s == '\r') { *s = 0; break; }
+    if (*s == '\n') { *s = 0; break; }
+    s++;
+  }
+
+}
+ 
 int main(int argc, char *argv[]) {
 
   char *line = NULL;
@@ -151,6 +161,10 @@ int main(int argc, char *argv[]) {
 	hints.ai_addr = NULL;
 	hints.ai_canonname = NULL;
 	hints.ai_next = NULL;
+
+	clean_end(ipv6_address_string);
+
+	printf("%s: Reading ipv6_address_string=%s\n", __FUNCTION__, ipv6_address_string);
 
 	retval = getaddrinfo(ipv6_address_string, NULL, &hints, &res);
     
