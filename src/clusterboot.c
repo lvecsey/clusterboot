@@ -25,6 +25,8 @@
 
 #include "show_items.h"
 
+#include "process.h"
+
 int compare_time(const void *a, const void *b) {
 
   clusterboot_t *aboot1 = (clusterboot_t*) a, *bboot1 = (clusterboot_t*) b;
@@ -88,6 +90,10 @@ int main(int argc, char *argv[]) {
 
   struct addrinfo *res;
 
+  clusterboot_t *fill, *end_fill;
+
+  cluster_node_t *node;
+
   if (items==NULL) {
     fprintf(stderr, "%s: Trouble allocating %ld items.\n", __FUNCTION__, num_entries);
     return -1;
@@ -130,6 +136,9 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  fill = items;
+
+  end_fill = items + num_entries;
 
   while ((read_bytes = getline(&line, &len, stdin)) != -1) {
     
