@@ -72,12 +72,6 @@ int main(int argc, char *argv[]) {
 
   clusterboot_t *items = malloc(sizeof(clusterboot_t) * num_entries);
 
-  clusterboot_t *fill = items, *end_fill = items + num_entries;
-
-  cluster_node_t *node;
-
-  clusterboot_t *startup_current = items, *shutdown_current = items;
-
   char *env_CLUSTERBOOT_INTERFACE = getenv("CLUSTERBOOT_INTERFACE");
 
   char *interface = env_CLUSTERBOOT_INTERFACE != NULL ? env_CLUSTERBOOT_INTERFACE : "eth2";
@@ -236,7 +230,7 @@ int main(int argc, char *argv[]) {
 
   show_items(items, num_entries);
 
-  process(items, num_entries);
+  process(s, interface, items, num_entries);
 
   close(s);
 
