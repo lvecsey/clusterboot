@@ -22,7 +22,7 @@ int udp6_shutdown(int s, unsigned char *ipv6) {
   
   struct sockaddr_in6 sa6;
 
-  unsigned short destination_port = 6495;
+  unsigned short destination_port = 6496;
 
   unsigned short ns_destination_port;
 
