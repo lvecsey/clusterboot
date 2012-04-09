@@ -152,7 +152,12 @@ int main(int argc, char *argv[]) {
 	return -1;
       }
 
-      sscanf(line, "%x:%x:%x:%x:%x:%x", node->mac_address, node->mac_address+1, node->mac_address+2, node->mac_address+3, node->mac_address+4, node->mac_address+5);
+      retval = sscanf(line, "%x:%x:%x:%x:%x:%x", node->mac_address, node->mac_address+1, node->mac_address+2, node->mac_address+3, node->mac_address+4, node->mac_address+5);
+
+      if (retval != 6) {
+	free(node);
+	continue;
+      }
 
       if (ipv6_address_string!=NULL) {
 
@@ -176,9 +181,9 @@ int main(int argc, char *argv[]) {
 	retval = getaddrinfo(ipv6_address_string, NULL, &hints, &res);
     
 	if (retval != 0) {
-	  fprintf(stderr, "%s: Trouble with call to getaddrinfo.\n", __FUNCTION__);
-	  fprintf(stderr, "%s: gai_strerror = %s\n", __FUNCTION__, gai_strerror(retval));
-	  return -1;
+	  fprintf(stderr, "%s: Failed getaddrinfo with gai_strerror = %s\n", __FUNCTION__, gai_strerror(retval));
+	  free(node);
+	  continue;
 	}
 
 	for (rp = res; rp != NULL; rp = rp->ai_next) {
