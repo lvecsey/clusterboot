@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include <unistd.h>
+#include <stdlib.h>
 
 #include <time.h>
 
@@ -40,27 +41,23 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
     
   struct timespec *startup_time, *shutdown_time;
 
-  clusterboot_t *fill = items, *end_fill = items + num_entries;
-
-  cluster_node_t *node;
-
   clusterboot_t *startup_current = items, *shutdown_current = items;
 
   int retval;
 
   assert(interface!=NULL && items != NULL && num_entries>0);
 
-  if (startup_current->time != NULL) {
-    startup_time = &startup_current->time->startup;
+  if (startup_current->time == NULL || shutdown_current->time == NULL) {
+    fprintf(stderr, "%s: Initial startup and shutdown times are nonexistent.\n", __FUNCTION__);
+    return -1;
   }
 
-  if (shutdown_current->time != NULL) {
-    shutdown_time = &shutdown_current->time->shutdown;
-  }
+  startup_time = &startup_current->time->startup;
+  shutdown_time = &shutdown_current->time->shutdown;
 
   assert(startup_time!=NULL && shutdown_time!=NULL);
 
-  for ( ; startup_count_down > 0 && shutdown_count_down > 0; ) {
+  for ( ; startup_count_down > 0 || shutdown_count_down > 0; ) {
 
     clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -68,9 +65,11 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
     if (startup_time->tv_sec > now.tv_sec && startup_count_down > 0) {
 
-      cluster_node_t *n = startup_current->node;
+      cluster_node_t *startup_node = startup_current->node;
 
-      retval = send_etherwake(interface, n->mac_address);
+      assert(startup_node != NULL);
+
+      retval = send_etherwake(interface, startup_node->mac_address);
 
       startup_count_down--;
 
