@@ -47,7 +47,7 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
     usleep(sleep_interval);
 
-    if (startup_time->tv_sec > now.tv_sec && startup_count_down > 0) {
+    if (now.tv_sec > startup_time->tv_sec && startup_count_down > 0) {
 
       cluster_node_t *startup_node = startup_current->node;
 
@@ -66,7 +66,7 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
     }
 
-    if (shutdown_time->tv_sec > now.tv_sec && shutdown_count_down > 0) {
+    if (now.tv_sec > shutdown_time->tv_sec && shutdown_count_down > 0) {
 
       cluster_node_t *shutdown_node = shutdown_current->node;
 
