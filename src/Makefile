@@ -18,7 +18,7 @@ await-shutdown : CFLAGS=-O2 -Wall
 
 await-shutdown : LIBS=-lrt
 
-await-shutdown : await-shutdown.o
+await-shutdown : await-shutdown.o poweroff_proc.o poweroff_proc.h
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 send-shutdown : CFLAGS=-O2 -Wall
