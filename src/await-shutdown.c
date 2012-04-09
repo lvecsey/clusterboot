@@ -16,6 +16,8 @@
 #include <sys/reboot.h>
 #include <linux/reboot.h>
 
+#include "poweroff_proc.h"
+
 int main(int argc, char *argv[]) {
 
   int len;
@@ -78,8 +80,11 @@ int main(int argc, char *argv[]) {
 
 	if (retval == -1) {
 	  perror("reboot");
+	  poweroff_proc();
 	  return -1;
 	}
+
+	poweroff_proc();
 
       }
 
