@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 
   unsigned short ns_listen_port;
 
-  struct timespec ts;
+  struct timespec receive_ts, ts;
 
   u_int64_t cmd_poweroff = 0x4000;
 
@@ -62,9 +62,10 @@ int main(int argc, char *argv[]) {
   for (;;) {
     len = sizeof(sa6);
     r = recvfrom(s,packet,sizeof packet,0,(struct sockaddr *) &sa6,&len);
-    if (r >= 4) {
+    if (r >= sizeof(struct timespec) + sizeof(u_int64_t)) {
 
-      memcpy(&cmd, packet, sizeof(u_int64_t));
+      memcpy(&receive_ts, packet, sizeof(struct timespec));
+      memcpy(&cmd, packet + sizeof(struct timespec), sizeof(u_int64_t));
 
       clock_gettime(CLOCK_REALTIME, &ts);
 
