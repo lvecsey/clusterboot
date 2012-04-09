@@ -16,11 +16,13 @@ int show_items(clusterboot_t *items, int num_items) {
     node = items->node;
     time = items->time;
 
-    printf("%x:%x:%x:%x:%x:%x %lu %lu\n", node->mac_address, node->mac_address+1, node->mac_address+2, node->mac_address+3, node->mac_address+4, node->mac_address+5, time->startup.tv_sec, time->shutdown.tv_sec);
+    printf("%x:%x:%x:%x:%x:%x %lu %lu\n", node->mac_address[0], node->mac_address[1], node->mac_address[2], node->mac_address[3], node->mac_address[4], node->mac_address[5], time->startup.tv_sec, time->shutdown.tv_sec);
 
     items++;
     num_items--;
 
   }
+
+  return 0;
 
 }
