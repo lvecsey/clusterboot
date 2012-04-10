@@ -30,8 +30,6 @@ int udp6_shutdown(int s, unsigned char *ipv6) {
 
   struct timespec ts;
 
-  int retval;
-
   u_int64_t cmd_poweroff = 0x4000;
 
   memset(&sa6,0,sizeof(sa6));
@@ -45,9 +43,22 @@ int udp6_shutdown(int s, unsigned char *ipv6) {
   
   clock_gettime(CLOCK_REALTIME, &ts);
 
-  memcpy(packet, &ts, sizeof(struct timespec));
+  {
+  
+    struct timespec ts_be64;
 
-  memcpy(packet + sizeof(struct timespec), &cmd_poweroff, sizeof(u_int64_t));
+    u_int64_t cmd_be64;
+
+    ts_be64.tv_sec = htobe32(ts.tv_sec);
+    ts_be64.tv_nsec = htobe32(ts.tv_nsec);
+
+    cmd_be64 = htobe64(cmd_poweroff);
+
+    memcpy(packet, &ts_be64, sizeof(struct timespec));
+
+    memcpy(packet + sizeof(struct timespec), &cmd_be64, sizeof(u_int64_t));
+
+  }
 
   r = sizeof(struct timespec) + sizeof(u_int64_t);
 
