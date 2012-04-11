@@ -21,6 +21,8 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
   useconds_t sleep_interval = 3000;
 
+  struct timespec process_time;
+
   struct timespec now;
     
   struct timespec *startup_time, *shutdown_time;
@@ -41,7 +43,11 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
   assert(startup_time!=NULL && shutdown_time!=NULL);
 
-  for ( ; startup_count_down > 0 || shutdown_count_down > 0; ) {
+  clock_gettime(CLOCK_MONOTONIC, &process_time);
+
+  process_time.tv_sec += 86400;
+
+  do {
 
     clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -83,7 +89,7 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
     }
 
-  }
+  } while (process_time.tv_sec > now.tv_sec);
 
   return 0;
 
