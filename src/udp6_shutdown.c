@@ -54,9 +54,9 @@ int udp6_shutdown(int s, unsigned char *ipv6) {
 
     cmd_be64 = htobe64(cmd_poweroff);
 
-    memcpy(packet, &ts_be64, sizeof(struct timespec));
+    memcpy(packet, &cmd_be64, sizeof(u_int64_t));
 
-    memcpy(packet + sizeof(struct timespec), &cmd_be64, sizeof(u_int64_t));
+    memcpy(packet + sizeof(u_int64_t), &ts_be64, sizeof(struct timespec));
 
   }
 
