@@ -59,6 +59,8 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
       assert(startup_node != NULL);
 
+      printf("%s: Sending etherwake startup to %s on interface %s.\n", __FUNCTION__, startup_node->mac_address, interface);
+
       retval = send_etherwake(interface, startup_node->mac_address);
 
       startup_count_down--;
@@ -77,6 +79,8 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
       cluster_node_t *shutdown_node = shutdown_current->node;
 
       assert(shutdown_node != NULL);
+
+      printf("%s: Sending udp6_shutdown to ipv6 address ending in %x%x.\n", __FUNCTION__, shutdown_node->ipv6[10], shutdown_node->ipv6[11]);
 
       udp6_shutdown(s, shutdown_node->ipv6);
 
