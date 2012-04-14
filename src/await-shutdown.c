@@ -64,15 +64,19 @@ int main(int argc, char *argv[]) {
   for (;;) {
     len = sizeof(sa6);
     r = recvfrom(s,packet,sizeof packet,0,(struct sockaddr *) &sa6,&len);
-    if (r >= sizeof(struct timespec) + sizeof(u_int64_t)) {
+    if (r >= sizeof(u_int64_t)) {
 
       memcpy(&cmd_be64, packet, sizeof(u_int64_t));
-      memcpy(&receive_ts_be64, packet + sizeof(u_int64_t), sizeof(struct timespec));
+
+      if (r >= sizeof(u_int64_t) + sizeof(struct timespec)) {
+
+	memcpy(&receive_ts_be64, packet + sizeof(u_int64_t), sizeof(struct timespec));
+	receive_ts.tv_sec = be32toh(receive_ts_be64.tv_sec);
+	receive_ts.tv_nsec = be32toh(receive_ts_be64.tv_nsec);
+
+      }
 
       cmd = be64toh(cmd_be64);
-
-      receive_ts.tv_sec = be32toh(receive_ts_be64.tv_sec);
-      receive_ts.tv_nsec = be32toh(receive_ts_be64.tv_nsec);
 
       clock_gettime(CLOCK_REALTIME, &ts);
 
