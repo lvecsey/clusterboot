@@ -47,7 +47,7 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
   process_time.tv_sec += 86400;
 
-  do {
+    do {
 
     clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -80,7 +80,7 @@ int process(int s, char *interface, clusterboot_t *items, int num_entries) {
 
       assert(shutdown_node != NULL);
 
-      printf("%s: Sending udp6_shutdown to ipv6 address ending in %x%x.\n", __FUNCTION__, shutdown_node->ipv6[10], shutdown_node->ipv6[11]);
+      printf("%s: Sending udp6_shutdown to ipv6 address ending in %x%x.\n", __FUNCTION__, shutdown_node->ipv6[14], shutdown_node->ipv6[15]);
 
       udp6_shutdown(s, shutdown_node->ipv6);
 
